@@ -8,7 +8,7 @@ on:
 jobs:
   vps-session:
     runs-on: ubuntu-latest
-    timeout-minutes: 600 # 5小时
+    timeout-minutes: 300 # 5小时
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -83,15 +83,12 @@ jobs:
           sudo docker run -d \
             --restart=always \
             --name agsb \
-            -p 80:80 \
+            -p 80:3000 \
             -p 21345:21345 \
             -p 42969:42969/udp \
-            -e PORT="80" \
             -e vmpt="21345" \
             -e hypt="42969" \
             -e argo="y" \
-            -e agn="" \
-            -e agk="" \
             -e uuid="${{ secrets.UUID }}" \
             lalucas/argosb:latest
 
@@ -104,7 +101,7 @@ jobs:
         uses: mxschmitt/action-tmate@v3
 
       - name: 保持 VPS 运行
-        run: sleep 36000 # 5小时
+        run: sleep 18000 # 5小时
 
       - name: 备份 VPS 数据和 Tailscale 状态
         run: |
