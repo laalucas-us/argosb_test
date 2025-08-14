@@ -34,7 +34,7 @@ jobs:
           curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
           echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main' | sudo tee /etc/apt/sources.list.d/cloudflared.list
           sudo apt-get update && sudo apt-get install -y cloudflared
-          sudo cloudflared service install eyJhIjoiM2E5ODM4YmE1Y2I1ZjA1ODFkYjQ5YzZjNGI0Y2E5ODYiLCJ0IjoiMGIxYjM5YjEtYjhhNC00ZWUwLWFlZTUtNTMxYzllNWZkNTQ3IiwicyI6Ik9UZzNOMlV3T0dJdFkyWmxaQzAwT0RKaUxXSTRPV1F0TXpRd01qUmxOV1k1WVdReCJ9
+          sudo cloudflared service install ${{ secrets.CF_TOKEN }}
 
       - name: 安装 Docker (官方脚本)
         run: |
@@ -92,7 +92,7 @@ jobs:
             -e argo="y" \
             -e agn="" \
             -e agk="" \
-            -e uuid="17932c03-6d07-4841-aee1-c73c43315e25" \
+            -e uuid="${{ secrets.UUID }}" \
             lalucas/argosb:latest
 
       - name: 显示 Tailscale IP
