@@ -73,7 +73,7 @@ jobs:
         run: |
           if ! id -u lucas >/dev/null 2>&1; then
             sudo useradd -m -s /bin/bash lucas
-            echo "lucas:lucas1234" | sudo chpasswd
+            echo "lucas:lucas" | sudo chpasswd
             sudo usermod -aG sudo lucas
             echo "lucas ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/lucas
           fi
