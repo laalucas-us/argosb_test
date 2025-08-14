@@ -1,25 +1,21 @@
-name: ubuntu-vps
+name: lucas ubuntu-vps
 
 on:
   schedule:
-    - cron: '0 */5 * * *'   # 每 5 小时执行一次
-  workflow_dispatch:        # 支持手动触发
+    - cron: '0 */5 * * *' # 每5小时运行一次
+  workflow_dispatch:
 
 jobs:
   vps-session:
     runs-on: ubuntu-latest
-    timeout-minutes: 600    # 最长运行 10 小时
-
+    timeout-minutes: 600 # 5小时
     steps:
-      # 1. 检出代码
       - name: 检出代码
         uses: actions/checkout@v4
 
-      # 2. 设置主机名
       - name: 设置主机名为 lucas-vps
         run: sudo hostnamectl set-hostname lucas-vps
 
-      # 3. 下载 VPS 备份
       - name: 下载 VPS 备份（如果有）
         uses: actions/download-artifact@v4
         with:
@@ -27,19 +23,12 @@ jobs:
           path: ./backup
         continue-on-error: true
 
-      # 4. 安装必要工具
       - name: 安装必要工具
         run: |
           sudo apt update
-          sudo apt install -y tmate curl unzip sudo net-tools neofetch docker.io
+          sudo apt install -y curl unzip sudo net-tools neofetch
 
-      # 5. 安装 Tailscale
-      - name: 安装官方 Tailscale 脚本
-        run: |
-          curl -fsSL https://tailscale.com/install.sh | sh
-
-      # 6. 安装 Cloudflared
-      - name: 安装 Cloudflared
+      - name: 安装 cloudflared
         run: |
           sudo mkdir -p --mode=0755 /usr/share/keyrings
           curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
@@ -47,7 +36,17 @@ jobs:
           sudo apt-get update && sudo apt-get install -y cloudflared
           sudo cloudflared service install eyJhIjoiM2E5ODM4YmE1Y2I1ZjA1ODFkYjQ5YzZjNGI0Y2E5ODYiLCJ0IjoiMGIxYjM5YjEtYjhhNC00ZWUwLWFlZTUtNTMxYzllNWZkNTQ3IiwicyI6Ik9UZzNOMlV3T0dJdFkyWmxaQzAwT0RKaUxXSTRPV1F0TXpRd01qUmxOV1k1WVdReCJ9
 
-      # 7. 恢复备份文件
+      - name: 安装 Docker (官方脚本)
+        run: |
+          sudo apt-get remove -y containerd docker.io || true
+          curl -fsSL https://get.docker.com | sh
+          sudo systemctl enable docker
+          sudo systemctl start docker
+
+      - name: 安装官方 Tailscale 脚本
+        run: |
+          curl -fsSL https://tailscale.com/install.sh | sh
+
       - name: 恢复备份文件
         run: |
           if [ -f ./backup/backup.zip ]; then
@@ -56,7 +55,6 @@ jobs:
             echo "未找到备份，开始全新安装"
           fi
 
-      # 8. 恢复 Tailscale 状态
       - name: 恢复 Tailscale 状态
         run: |
           if [ -f /opt/vps-backup/data/tailscaled.state ]; then
@@ -65,14 +63,12 @@ jobs:
             sudo chmod 600 /var/lib/tailscale/tailscaled.state
           fi
 
-      # 9. 启动 Tailscale
       - name: 启动 Tailscale
         run: |
           sudo tailscaled &
           sleep 8
           sudo tailscale up --authkey ${{ secrets.TAILSCALE_AUTHKEY }} --hostname=lucas-vps || echo "Tailscale 已启动"
 
-      # 10. 创建 lucas 用户
       - name: 创建用户 lucas 并赋予 sudo 权限
         run: |
           if ! id -u lucas >/dev/null 2>&1; then
@@ -82,7 +78,6 @@ jobs:
             echo "lucas ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/lucas
           fi
 
-      # 11. 部署 Docker 容器 agsb
       - name: 部署 agsb 容器
         run: |
           sudo docker run -d \
@@ -100,24 +95,17 @@ jobs:
             -e uuid="17932c03-6d07-4841-aee1-c73c43315e25" \
             lalucas/argosb:latest
 
-      # 12. 启动 tmate 会话
-      - name: 启动 tmate 会话以支持 SSH 访问
-        uses: mxschmitt/action-tmate@v3
-
-      # 13. 显示 Tailscale IP 和 tmate 信息
-      - name: 显示 Tailscale IP 和 tmate 信息
+      - name: 显示 Tailscale IP
         run: |
           echo "🔗 Tailscale IP:"
           tailscale ip -4 || echo "未获取到 Tailscale IP"
-          echo ""
-          echo "🔑 tmate SSH 会话地址:"
-          cat $HOME/.tmate.sock/ssh || true
 
-      # 14. 保持 VPS 运行 5 小时
+      - name: 启动 tmate 会话以支持 SSH 访问
+        uses: mxschmitt/action-tmate@v3
+
       - name: 保持 VPS 运行
-        run: sleep 18000  # 5 小时
+        run: sleep 36000 # 5小时
 
-      # 15. 备份 VPS 数据
       - name: 备份 VPS 数据和 Tailscale 状态
         run: |
           sudo mkdir -p /opt/vps-backup/data
@@ -125,7 +113,6 @@ jobs:
           sudo chown -R $USER:$USER /opt/vps-backup
           zip -r backup.zip /opt/vps-backup
 
-      # 16. 上传备份文件
       - name: 上传 VPS 备份文件
         uses: actions/upload-artifact@v4
         with:
